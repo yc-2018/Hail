@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/padding_extra_small"
+    android:layout_marginTop="@dimen/padding_small"
+    android:layout_marginEnd="@dimen/padding_extra_small"
+    android:layout_marginBottom="@dimen/padding_extra_small"
+    android:foreground="?selectableItemBackground"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/padding_small"
+    android:paddingTop="@dimen/padding_extra_small"
+    android:paddingEnd="@dimen/padding_extra_small"
+    android:paddingBottom="@dimen/padding_extra_small"
+    tools:viewBindingIgnore="true">
+
+    <ImageView
+        android:id="@+id/group_drag"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_outline_move"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/group_expand"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_outline_expand_more" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/group_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/padding_small"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+    <ImageView
+        android:id="@+id/group_color"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?selectableItemBackgroundBorderless"
+        android:contentDescription="@string/action_group_color"
+        android:padding="@dimen/padding_small"
+        android:src="@drawable/ic_outline_palette" />
+
+    <ImageView
+        android:id="@+id/group_more"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?selectableItemBackgroundBorderless"
+        android:contentDescription="@null"
+        android:padding="@dimen/padding_small"
+        android:src="@drawable/ic_outline_more_vert" />
+</LinearLayout>

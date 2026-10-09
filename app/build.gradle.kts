@@ -18,7 +18,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.aistra.hail"
+        // Different from upstream (com.aistra.hail) so this fork installs side by side with it.
+        applicationId = "com.aistra.hail.mod"
         minSdk = 23
         targetSdk = 36
         versionCode = 35
@@ -67,7 +68,7 @@ androidComponents {
     onVariants { variant ->
         variant.outputs.forEach {
             if (it is com.android.build.api.variant.impl.VariantOutputImpl)
-                it.outputFileName = "Hail-v${it.versionName.get()}.apk"
+                it.outputFileName = "HailMod-v${it.versionName.get()}.apk"
         }
     }
 }

@@ -27,7 +27,8 @@ object HailData {
     private const val KEY_ID = "id"
     const val KEY_TAG = "tag"
     private const val KEY_TAGS = "tags"
-    private const val KEY_PINNED = "pinned"
+    private const val KEY_GROUP_COLOR = "color"
+    private const val KEY_GROUP_COLLAPSED = "collapsed"
     private const val KEY_WHITELISTED = "whitelisted"
     const val KEY_PACKAGE = "package"
     const val KEY_FROZEN = "frozen"
@@ -160,6 +161,22 @@ object HailData {
     private val appsPath = "$dir/apps.json"
     private val tagsPath = "$dir/tags.json"
 
+    /**
+     * A home group (formerly "tag"). It owns a name, an optional background color and a collapsed
+     * state. The order of groups in [tags] is the order they are shown on the Home screen.
+     */
+    class HomeGroup(
+        var name: String,
+        val id: Int,
+        var color: Int = NO_COLOR,
+        var collapsed: Boolean = false
+    ) {
+        companion object {
+            /** No custom background color, the theme surface is used instead. */
+            const val NO_COLOR = 0
+        }
+    }
+
     val checkedList: MutableList<AppInfo> by lazy {
         mutableListOf<AppInfo>().apply {
             runCatching {
@@ -168,11 +185,11 @@ object HailData {
                     add(with(json.getJSONObject(i)) {
                         AppInfo(
                             packageName = getString(KEY_PACKAGE),
-                            pinned = optBoolean(KEY_PINNED),
                             whitelisted = optBoolean(KEY_WHITELISTED),
-                            tagIdList = optJSONArray(KEY_TAGS)?.let {
-                                MutableList(it.length()) { index -> it.getInt(index) }
-                            } ?: mutableListOf(optInt(KEY_TAG))
+                            tagId = when {
+                                has(KEY_TAG) -> optInt(KEY_TAG)
+                                else -> optJSONArray(KEY_TAGS)?.optInt(0) ?: 0
+                            }
                         )
                     })
                 }
@@ -183,7 +200,7 @@ object HailData {
     fun isChecked(packageName: String): Boolean = checkedList.any { it.packageName == packageName }
 
     fun addCheckedApp(packageName: String, tagId: Int = 0, saveApps: Boolean = true) {
-        checkedList.add(AppInfo(packageName, tagIdList = mutableListOf(tagId)))
+        checkedList.add(AppInfo(packageName, tagId = tagId))
         if (saveApps) saveApps()
     }
 
@@ -192,6 +209,9 @@ object HailData {
         if (saveApps) saveApps()
     }
 
+    /** Applications belonging to [tagId], in the order they appear on the Home screen. */
+    fun appsOfTag(tagId: Int): List<AppInfo> = checkedList.filter { it.tagId == tagId }
+
     fun saveApps() {
         if (!HFiles.exists(dir)) HFiles.createDirectories(dir)
         HFiles.write(appsPath, JSONArray().run {
@@ -199,24 +219,31 @@ object HailData {
                 put(
                     JSONObject()
                         .put(KEY_PACKAGE, it.packageName)
-                        .put(KEY_PINNED, it.pinned)
                         .put(KEY_WHITELISTED, it.whitelisted)
-                        .put(KEY_TAGS, JSONArray(it.tagIdList))
+                        .put(KEY_TAG, it.tagId)
                 )
             }
             toString()
         })
     }
 
-    val tags: MutableList<Pair<String, Int>> by lazy {
-        mutableListOf<Pair<String, Int>>().apply {
+    val tags: MutableList<HomeGroup> by lazy {
+        mutableListOf<HomeGroup>().apply {
             runCatching {
                 val json = JSONArray(HFiles.read(tagsPath))
                 for (i in 0 until json.length()) {
-                    add(with(json.getJSONObject(i)) { getString(KEY_TAG) to getInt(KEY_ID) })
+                    add(with(json.getJSONObject(i)) {
+                        HomeGroup(
+                            name = getString(KEY_TAG),
+                            id = getInt(KEY_ID),
+                            color = optInt(KEY_GROUP_COLOR, HomeGroup.NO_COLOR),
+                            collapsed = optBoolean(KEY_GROUP_COLLAPSED)
+                        )
+                    })
                 }
+                if (isEmpty()) throw IllegalStateException("No group")
             }.onFailure {
-                add(app.getString(R.string.label_default) to 0)
+                add(HomeGroup(app.getString(R.string.label_default), 0))
             }
         }
     }
@@ -225,7 +252,13 @@ object HailData {
         if (!HFiles.exists(dir)) HFiles.createDirectories(dir)
         HFiles.write(tagsPath, JSONArray().run {
             tags.forEach {
-                put(JSONObject().put(KEY_TAG, it.first).put(KEY_ID, it.second))
+                put(
+                    JSONObject()
+                        .put(KEY_TAG, it.name)
+                        .put(KEY_ID, it.id)
+                        .put(KEY_GROUP_COLOR, it.color)
+                        .put(KEY_GROUP_COLLAPSED, it.collapsed)
+                )
             }
             toString()
         })

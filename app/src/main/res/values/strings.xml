@@ -157,4 +157,21 @@
     <string name="state_hidden">Hidden</string>
     <string name="state_suspended">Suspended</string>
     <string name="state_uninstalled">Uninstalled</string>
+    <string name="app_name_fork">Hail Mod</string>
+    <string name="action_add_group">Add group</string>
+    <string name="action_move">Move</string>
+    <string name="action_group_rename">Rename group</string>
+    <string name="action_group_remove">Remove group</string>
+    <string name="action_group_color">Background color</string>
+    <string name="group_name">Group name</string>
+    <string name="msg_move_on">Move mode on: long press and drag to reorder groups and apps</string>
+    <string name="msg_move_off">Move mode off</string>
+    <string name="color_default">Default</string>
+    <string name="color_red">Red</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_green">Green</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_purple">Purple</string>
 </resources>

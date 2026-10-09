@@ -357,8 +357,8 @@ class SettingsFragment : MainFragment(), MenuProvider {
             .setItems(R.array.pin_shortcut_entries) { _, which ->
                 when (which) {
                     0 -> MaterialAlertDialogBuilder(requireActivity()).setTitle(R.string.action_freeze_tag)
-                        .setItems(HailData.tags.map { it.first }.toTypedArray()) { _, index ->
-                            val tag = HailData.tags[index].first
+                        .setItems(HailData.tags.map { it.name }.toTypedArray()) { _, index ->
+                            val tag = HailData.tags[index].name
                             HShortcuts.addPinShortcut(
                                 AppCompatResources.getDrawable(
                                     requireContext(), R.drawable.ic_round_frozen_shortcut
@@ -370,8 +370,8 @@ class SettingsFragment : MainFragment(), MenuProvider {
                         }.setNegativeButton(android.R.string.cancel, null).show()
 
                     1 -> MaterialAlertDialogBuilder(requireActivity()).setTitle(R.string.action_unfreeze_tag)
-                        .setItems(HailData.tags.map { it.first }.toTypedArray()) { _, index ->
-                            val tag = HailData.tags[index].first
+                        .setItems(HailData.tags.map { it.name }.toTypedArray()) { _, index ->
+                            val tag = HailData.tags[index].name
                             HShortcuts.addPinShortcut(
                                 AppCompatResources.getDrawable(
                                     requireContext(), R.drawable.ic_round_unfrozen_shortcut

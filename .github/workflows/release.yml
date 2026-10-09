@@ -1,0 +1,96 @@
+name: Release
+
+# 触发方式：
+#  1. 推送形如 v1.11.0 的标签：git tag v1.11.0 && git push origin v1.11.0
+#  2. 在 Actions 页面手动运行（可填写标签名，不填则使用 build.gradle 中的 versionName）
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release 标签名（例如 v1.11.0），留空则自动生成'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 若在仓库 Settings -> Secrets 中配置了 KEYSTORE / KEYSTORE_PASSWORD /
+      # KEYSTORE_ALIAS / KEYSTORE_ALIAS_PASSWORD，则使用正式签名；
+      # 否则 build.gradle 会自动回退到 debug 签名（每次 CI 的 debug 密钥不同，
+      # 覆盖安装时需先卸载旧版）。
+      - name: Prepare signing
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then
+            echo "$KEYSTORE" | base64 --decode > keystore.jks
+            {
+              echo "storeFile=../keystore.jks"
+              echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
+              echo "keyAlias=${{ secrets.KEYSTORE_ALIAS }}"
+              echo "keyPassword=${{ secrets.KEYSTORE_ALIAS_PASSWORD }}"
+            } > signing.properties
+            echo "SIGNED=release" >> "$GITHUB_ENV"
+          else
+            echo "SIGNED=debug" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          APK=$(jq -r '.elements[0].outputFile' app/build/outputs/apk/release/output-metadata.json)
+          VERSION=$(jq -r '.elements[0].versionName' app/build/outputs/apk/release/output-metadata.json)
+          echo "APK=app/build/outputs/apk/release/$APK" >> "$GITHUB_ENV"
+          echo "APK_NAME=$APK" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Resolve release tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          elif [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="v${VERSION}"
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_NAME }}
+          path: ${{ env.APK }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          files: ${{ env.APK }}
+          generate_release_notes: true
+          body: |
+            版本：${{ env.VERSION }}
+            签名：${{ env.SIGNED }}
+            提交：${{ github.sha }}

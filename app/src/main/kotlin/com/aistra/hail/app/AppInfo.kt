@@ -6,9 +6,8 @@ import com.aistra.hail.utils.HPackages
 
 class AppInfo(
     val packageName: String,
-    var pinned: Boolean = false,
     var whitelisted: Boolean = false,
-    val tagIdList: MutableList<Int> = mutableListOf(0)
+    var tagId: Int = 0
 ) {
     enum class State { NOT_FOUND, UNFROZEN, FROZEN }
 
