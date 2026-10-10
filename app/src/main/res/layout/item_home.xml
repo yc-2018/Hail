@@ -37,10 +37,11 @@
 
     <ImageView
         android:id="@+id/app_drag"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_gravity="top|end"
-        android:contentDescription="@null"
+        android:contentDescription="@string/action_move"
+        android:padding="6dp"
         android:src="@drawable/ic_outline_move"
         android:visibility="gone" />
 </FrameLayout>

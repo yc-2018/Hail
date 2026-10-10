@@ -18,9 +18,10 @@
 
     <ImageView
         android:id="@+id/group_drag"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:contentDescription="@null"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/action_move"
+        android:padding="@dimen/padding_small"
         android:src="@drawable/ic_outline_move"
         android:visibility="gone" />
 

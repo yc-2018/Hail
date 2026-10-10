@@ -164,7 +164,7 @@
     <string name="action_group_remove">Remove group</string>
     <string name="action_group_color">Background color</string>
     <string name="group_name">Group name</string>
-    <string name="msg_move_on">Move mode on: long press and drag to reorder groups and apps</string>
+    <string name="msg_move_on">Move mode on: drag the handle to reorder groups and apps</string>
     <string name="msg_move_off">Move mode off</string>
     <string name="color_default">Default</string>
     <string name="color_red">Red</string>

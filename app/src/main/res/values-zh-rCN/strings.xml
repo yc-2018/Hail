@@ -27,7 +27,7 @@
     <string name="action_deferred_task">定时任务</string>
     <string name="action_tag_add">添加标签</string>
     <string name="action_tag_remove">移除标签</string>
-    <string name="action_tag_set">标签分组</string>
+    <string name="action_tag_set">设置分组</string>
     <string name="action_add_pin_shortcut">添加到主屏幕</string>
     <string name="action_export_clipboard">导出到剪切板</string>
     <string name="action_import_clipboard">从剪切板导入</string>
@@ -155,4 +155,21 @@
     <string name="state_suspended">已暂停</string>
     <string name="state_uninstalled">已卸载</string>
     <string name="donate_kofi">Ko-fi</string>
+    <string name="app_name_fork">雹 Mod</string>
+    <string name="action_add_group">添加分组</string>
+    <string name="action_move">移动</string>
+    <string name="action_group_rename">重命名分组</string>
+    <string name="action_group_remove">删除分组</string>
+    <string name="action_group_color">分组底色</string>
+    <string name="group_name">分组名称</string>
+    <string name="msg_move_on">移动模式已开启：按住手柄直接拖动即可调整分组和应用的位置</string>
+    <string name="msg_move_off">移动模式已关闭</string>
+    <string name="color_default">默认</string>
+    <string name="color_red">红色</string>
+    <string name="color_orange">橙色</string>
+    <string name="color_yellow">黄色</string>
+    <string name="color_green">绿色</string>
+    <string name="color_teal">青色</string>
+    <string name="color_blue">蓝色</string>
+    <string name="color_purple">紫色</string>
 </resources>

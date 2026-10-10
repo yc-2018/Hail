@@ -1,8 +1,11 @@
 package com.aistra.hail.ui.home
 
+import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -20,7 +23,7 @@ import kotlinx.coroutines.Job
 /** A row of the Home screen: either a group header or a single application cell. */
 sealed class HomeItem {
     class Group(val group: HomeGroup) : HomeItem()
-    class App(val info: AppInfo, val color: Int) : HomeItem()
+    class App(val info: AppInfo, val color: Int, val selected: Boolean = false) : HomeItem()
 }
 
 /**
@@ -32,7 +35,8 @@ class HomeListAdapter(
     private val onAppLongClick: (AppInfo) -> Boolean,
     private val onGroupClick: (HomeGroup) -> Unit,
     private val onGroupLongClick: (HomeGroup) -> Boolean,
-    private val onGroupColorClick: (HomeGroup) -> Unit
+    private val onGroupColorClick: (HomeGroup) -> Unit,
+    private val onStartDrag: (RecyclerView.ViewHolder) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -82,6 +86,26 @@ class HomeListAdapter(
     private fun itemAt(position: Int): HomeItem? =
         if (position in mutableItems.indices) mutableItems[position] else null
 
+    /** Group colors are drawn translucent so they stay soft in light mode and readable in dark mode. */
+    private fun View.tinted(color: Int): Int {
+        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        val alpha = if (night) 0x66 else 0x4D
+        return (color and 0x00FFFFFF) or (alpha shl 24)
+    }
+
+    private fun View.roundedRect(color: Int): GradientDrawable = GradientDrawable().apply {
+        cornerRadius = resources.getDimension(R.dimen.padding_small)
+        setColor(color)
+    }
+
+    /** Starts a drag as soon as the handle is touched, no long press needed. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun View.startDragOnTouch(holder: RecyclerView.ViewHolder) = setOnTouchListener { _, event ->
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) onStartDrag(holder)
+        false
+    }
+
     inner class GroupViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val drag: ImageView = view.findViewById(R.id.group_drag)
         private val expand: ImageView = view.findViewById(R.id.group_expand)
@@ -97,24 +121,26 @@ class HomeListAdapter(
             view.setOnLongClickListener { boundGroup?.let(onGroupLongClick) ?: false }
             color.setOnClickListener { boundGroup?.let(onGroupColorClick) }
             more.setOnClickListener { boundGroup?.let(onGroupLongClick) }
+            drag.startDragOnTouch(this)
         }
 
         fun bind(group: HomeGroup) {
             name.text = group.name
             expand.rotation = if (group.collapsed) 0f else 180f
             drag.visibility = if (moveMode) View.VISIBLE else View.GONE
-            itemView.background = GradientDrawable().apply {
-                cornerRadius = itemView.resources.getDimension(R.dimen.padding_small)
-                setColor(
-                    if (group.color != HomeGroup.NO_COLOR) group.color else MaterialColors.getColor(
-                        itemView,
-                        com.google.android.material.R.attr.colorSurfaceContainerHigh,
-                        0x33888888
-                    )
+            val custom = group.color != HomeGroup.NO_COLOR
+            itemView.background = itemView.roundedRect(
+                if (custom) itemView.tinted(group.color) else MaterialColors.getColor(
+                    itemView, com.google.android.material.R.attr.colorSurfaceContainerHigh, 0x33888888
                 )
-            }
-            if (group.color != HomeGroup.NO_COLOR) color.setColorFilter(group.color)
-            else color.clearColorFilter()
+            )
+            // The palette icon keeps its normal tint; the chosen color shows as a swatch behind it.
+            color.clearColorFilter()
+            color.background = if (custom) GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(itemView.tinted(group.color))
+                setStroke(itemView.resources.getDimensionPixelSize(R.dimen.padding_extra_small) / 2, group.color)
+            } else null
         }
     }
 
@@ -130,15 +156,23 @@ class HomeListAdapter(
         init {
             view.setOnClickListener { boundInfo?.let(onAppClick) }
             view.setOnLongClickListener { boundInfo?.let(onAppLongClick) ?: false }
+            drag.startDragOnTouch(this)
         }
 
         fun bind(item: HomeItem.App) {
             val info = item.info
             drag.visibility = if (moveMode) View.VISIBLE else View.GONE
-            background.background = if (item.color != HomeGroup.NO_COLOR) GradientDrawable().apply {
-                cornerRadius = itemView.resources.getDimension(R.dimen.padding_small)
-                setColor(item.color)
-            } else null
+            val primary = MaterialColors.getColor(itemView, androidx.appcompat.R.attr.colorPrimary)
+            background.background = when {
+                // Selected cells get a primary-colored border plus a light primary wash so the
+                // selection is obvious on top of any group color.
+                item.selected -> itemView.roundedRect(itemView.tinted(primary)).apply {
+                    setStroke(itemView.resources.getDimensionPixelSize(R.dimen.selection_stroke), primary)
+                }
+
+                item.color != HomeGroup.NO_COLOR -> itemView.roundedRect(itemView.tinted(item.color))
+                else -> null
+            }
 
             icon.run {
                 info.applicationInfo?.let {
@@ -157,11 +191,16 @@ class HomeListAdapter(
                     append(info.name)
                 }
                 isEnabled = !HailData.grayscaleIcon || info.state != AppInfo.State.FROZEN
-                if (info.state == AppInfo.State.NOT_FOUND) setTextColor(
-                    MaterialColors.getColor(this, androidx.appcompat.R.attr.colorError)
-                ) else setTextAppearance(
-                    com.google.android.material.R.style.TextAppearance_Material3_BodyMedium
-                )
+                when {
+                    item.selected -> setTextColor(primary)
+                    info.state == AppInfo.State.NOT_FOUND -> setTextColor(
+                        MaterialColors.getColor(this, androidx.appcompat.R.attr.colorError)
+                    )
+
+                    else -> setTextAppearance(
+                        com.google.android.material.R.style.TextAppearance_Material3_BodyMedium
+                    )
+                }
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, HailData.homeFontSize)
             }
         }

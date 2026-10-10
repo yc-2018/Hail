@@ -5,6 +5,7 @@ import android.provider.Settings
 import android.text.InputType
 import android.view.*
 import android.widget.EditText
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -55,7 +56,8 @@ class HomeFragment : MainFragment(), MenuProvider {
             onAppLongClick = ::onAppLongClick,
             onGroupClick = ::toggleGroup,
             onGroupLongClick = ::onGroupLongClick,
-            onGroupColorClick = ::showColorDialog
+            onGroupColorClick = ::showColorDialog,
+            onStartDrag = { holder -> touchHelper?.startDrag(holder) }
         )
         val spanCount = resources.getInteger(
             if (HailData.compactIcon) R.integer.home_span_compact else R.integer.home_span
@@ -70,7 +72,6 @@ class HomeFragment : MainFragment(), MenuProvider {
             adapter = listAdapter
             applyDefaultInsetter { paddingRelative(isRtl, bottom = isLandscape) }
         }
-        binding.actionBar.applyDefaultInsetter { paddingRelative(isRtl, start = !isLandscape, end = true) }
         binding.refresh.apply {
             setOnRefreshListener {
                 updateList()
@@ -78,11 +79,23 @@ class HomeFragment : MainFragment(), MenuProvider {
             }
             applyDefaultInsetter { marginRelative(isRtl, start = !isLandscape, end = true) }
         }
-        binding.addGroup.setOnClickListener { showAddGroupDialog() }
-        binding.move.isCheckable = true
-        binding.move.setOnClickListener { setMoveMode(!moveMode) }
         touchHelper = ItemTouchHelper(DragCallback()).also { it.attachToRecyclerView(binding.recyclerView) }
+        // Back closes move mode / multiselect first instead of leaving the screen.
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
         return binding.root
+    }
+
+    private val backCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            when {
+                moveMode -> setMoveMode(false)
+                multiselect -> setMultiselectMode(false)
+            }
+        }
+    }
+
+    private fun updateBackCallback() {
+        backCallback.isEnabled = moveMode || multiselect
     }
 
     override fun onResume() {
@@ -114,7 +127,9 @@ class HomeFragment : MainFragment(), MenuProvider {
             val apps = HailData.appsOfTag(group.id).filter { matchesQuery(it) }
             if (searching && apps.isEmpty()) return@forEach
             items += HomeItem.Group(group)
-            if (searching || !group.collapsed) apps.forEach { items += HomeItem.App(it, group.color) }
+            if (searching || !group.collapsed) apps.forEach {
+                items += HomeItem.App(it, group.color, selected = multiselect && it in selectedList)
+            }
         }
         return items
     }
@@ -137,9 +152,22 @@ class HomeFragment : MainFragment(), MenuProvider {
 
     private fun setMoveMode(enabled: Boolean) {
         moveMode = enabled
-        binding.move.isChecked = enabled
         listAdapter.moveMode = enabled
+        // Pull-to-refresh fights with vertical drags, so it is off for the whole move mode.
+        binding.refresh.isEnabled = !enabled
+        updateBackCallback()
+        activity.invalidateMenu()
         HUI.showToast(if (enabled) R.string.msg_move_on else R.string.msg_move_off)
+    }
+
+    private fun setMultiselectMode(enabled: Boolean) {
+        multiselect = enabled
+        updateBackCallback()
+        activity.invalidateMenu()
+        if (enabled) {
+            updateBarTitle()
+            HUI.showToast(R.string.tap_to_select)
+        } else deselect()
     }
 
     private inner class DragCallback : ItemTouchHelper.Callback() {
@@ -165,12 +193,18 @@ class HomeFragment : MainFragment(), MenuProvider {
 
         override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
             super.onSelectedChanged(viewHolder, actionState)
-            if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) viewHolder?.itemView?.alpha = 0.5f
+            if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                viewHolder?.itemView?.alpha = 0.5f
+                // Dragging must never open the context menu or start a refresh.
+                viewHolder?.itemView?.cancelLongPress()
+                binding.refresh.isEnabled = false
+            }
         }
 
         override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
             super.clearView(recyclerView, viewHolder)
             viewHolder.itemView.alpha = 1f
+            binding.refresh.isEnabled = !moveMode
             persistOrder()
         }
     }
@@ -200,9 +234,12 @@ class HomeFragment : MainFragment(), MenuProvider {
             )
             return true
         }
-        if (items[to] is HomeItem.Group) return false
-        items.add(to, items.removeAt(from))
-        listAdapter.notifyItemMoved(from, to)
+        // Dropping onto a group header puts the app right below that header, which is the only way
+        // into an empty group. Moving down already lands after the header; moving up needs +1.
+        val target = if (items[to] is HomeItem.Group && to < from) to + 1 else to
+        if (target == from) return false
+        items.add(target, items.removeAt(from))
+        listAdapter.notifyItemMoved(from, target)
         return true
     }
 
@@ -273,6 +310,7 @@ class HomeFragment : MainFragment(), MenuProvider {
     }
 
     private fun onGroupLongClick(group: HomeGroup): Boolean {
+        if (moveMode) return true
         val actions = mutableListOf(R.string.action_group_rename)
         if (HailData.tags.size > 1 && group.id != 0) actions += R.string.action_group_remove
         MaterialAlertDialogBuilder(activity).setTitle(group.name)
@@ -344,6 +382,8 @@ class HomeFragment : MainFragment(), MenuProvider {
     }
 
     private fun onAppLongClick(info: AppInfo): Boolean {
+        // In move mode a long press is a drag gesture, never a menu.
+        if (moveMode) return true
         if (info.applicationInfo == null && (!multiselect || info !in selectedList)) {
             exportToClipboard(listOf(info))
             return true
@@ -553,10 +593,10 @@ class HomeFragment : MainFragment(), MenuProvider {
 
     /* --------------------------------------------------------------------- menu */
 
-    private fun MenuItem.updateIcon() = icon?.setTint(
+    private fun MenuItem.updateIcon(active: Boolean) = icon?.setTint(
         MaterialColors.getColor(
             activity.findViewById(R.id.toolbar),
-            if (multiselect) androidx.appcompat.R.attr.colorPrimary
+            if (active) androidx.appcompat.R.attr.colorPrimary
             else com.google.android.material.R.attr.colorOnSurface
         )
     )
@@ -580,19 +620,15 @@ class HomeFragment : MainFragment(), MenuProvider {
 
             override fun onQueryTextSubmit(query: String): Boolean = true
         })
-        menu.findItem(R.id.action_multiselect).updateIcon()
+        menu.findItem(R.id.action_multiselect).updateIcon(multiselect)
+        menu.findItem(R.id.action_move).updateIcon(moveMode)
     }
 
     override fun onMenuItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_multiselect -> {
-                multiselect = !multiselect
-                item.updateIcon()
-                if (multiselect) {
-                    updateBarTitle()
-                    HUI.showToast(R.string.tap_to_select)
-                } else deselect()
-            }
+            R.id.action_add_group -> showAddGroupDialog()
+            R.id.action_move -> setMoveMode(!moveMode)
+            R.id.action_multiselect -> setMultiselectMode(!multiselect)
 
             R.id.action_freeze_current -> setListFrozen(true, getVisibleApps().filterNot { it.whitelisted })
             R.id.action_unfreeze_current -> setListFrozen(false, getVisibleApps())

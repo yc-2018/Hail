@@ -5,33 +5,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <LinearLayout
-        android:id="@+id/action_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:clipToPadding="false"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="@dimen/padding_small"
-        android:paddingEnd="@dimen/padding_small">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/add_group"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/padding_small"
-            android:text="@string/action_add_group"
-            app:icon="@drawable/ic_outline_add" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/move"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/action_move"
-            app:icon="@drawable/ic_outline_move" />
-    </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
