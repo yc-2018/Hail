@@ -43,6 +43,10 @@ class HomeFragment : MainFragment(), MenuProvider {
     private val binding get() = _binding!!
     private var query: String = String()
     private var moveMode: Boolean = false
+    /** Set while a drag actually reorders something, so a plain tap on a handle changes nothing. */
+    private var dragChanged: Boolean = false
+    /** Set by [DragCallback.chooseDropTarget] when the finger is past the last app of a row/group. */
+    private var dropAfterTarget: Boolean = false
     private lateinit var listAdapter: HomeListAdapter
     private var touchHelper: ItemTouchHelper? = null
 
@@ -151,6 +155,7 @@ class HomeFragment : MainFragment(), MenuProvider {
     /* ---------------------------------------------------------------- move mode */
 
     private fun setMoveMode(enabled: Boolean) {
+        if (enabled && multiselect) setMultiselectMode(false)
         moveMode = enabled
         listAdapter.moveMode = enabled
         // Pull-to-refresh fights with vertical drags, so it is off for the whole move mode.
@@ -161,6 +166,7 @@ class HomeFragment : MainFragment(), MenuProvider {
     }
 
     private fun setMultiselectMode(enabled: Boolean) {
+        if (enabled && moveMode) setMoveMode(false)
         multiselect = enabled
         updateBackCallback()
         activity.invalidateMenu()
@@ -191,6 +197,40 @@ class HomeFragment : MainFragment(), MenuProvider {
 
         override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
 
+        /**
+         * The default picker only considers views that overlap the dragged one, so dropping an app
+         * on the empty cells after a group's last row never finds a target. Fall back to "the last
+         * app above the finger in the same column band": if the finger is below the last app of the
+         * group whose header is above it, drop right after that app.
+         */
+        override fun chooseDropTarget(
+            selected: RecyclerView.ViewHolder, dropTargets: MutableList<RecyclerView.ViewHolder>, curX: Int, curY: Int
+        ): RecyclerView.ViewHolder? {
+            super.chooseDropTarget(selected, dropTargets, curX, curY)?.let {
+                dropAfterTarget = false
+                return it
+            }
+            if (listAdapter.getItemViewType(selected.bindingAdapterPosition) == HomeListAdapter.TYPE_GROUP) return null
+            val rv = binding.recyclerView
+            val centerY = curY + selected.itemView.height / 2
+            // The deepest child whose top is above the finger: the row we hover on, or the last row
+            // of the group we are below.
+            var best: RecyclerView.ViewHolder? = null
+            for (i in 0 until rv.childCount) {
+                val child = rv.getChildAt(i)
+                val holder = rv.getChildViewHolder(child)
+                if (holder === selected || child.top > centerY) continue
+                if (best == null || child.top > best.itemView.top) best = holder
+            }
+            val candidate = best ?: return null
+            val position = candidate.bindingAdapterPosition
+            if (position < 0 || position == selected.bindingAdapterPosition) return null
+            // An app candidate here means "insert right after it": the finger is on the empty cells
+            // after the last app of its row, or below the group's last row.
+            dropAfterTarget = listAdapter.getItemViewType(position) == HomeListAdapter.TYPE_APP
+            return candidate
+        }
+
         override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
             super.onSelectedChanged(viewHolder, actionState)
             if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
@@ -205,7 +245,11 @@ class HomeFragment : MainFragment(), MenuProvider {
             super.clearView(recyclerView, viewHolder)
             viewHolder.itemView.alpha = 1f
             binding.refresh.isEnabled = !moveMode
-            persistOrder()
+            if (!dragChanged) return
+            dragChanged = false
+            // clearView can run inside RecyclerView's layout pass (recover animation end), where
+            // notifyDataSetChanged() throws. Defer the save + rebuild to the next frame.
+            recyclerView.post { if (_binding != null) persistOrder() }
         }
     }
 
@@ -227,19 +271,27 @@ class HomeFragment : MainFragment(), MenuProvider {
             repeat(block.size) { items.removeAt(start) }
             var insertAt = if (to > end) to - block.size + 1 else to
             insertAt = snapToGroupBoundary(items, insertAt)
+            if (insertAt == start) {
+                items.addAll(start, block)
+                return false
+            }
             items.addAll(insertAt, block)
-            listAdapter.notifyItemMoved(start, insertAt)
-            listAdapter.notifyItemRangeChanged(
-                minOf(start, insertAt), block.size + kotlin.math.abs(insertAt - start)
-            )
+            // Describe the block move as exact single-item moves so RecyclerView's bookkeeping
+            // stays consistent (one notifyItemMoved + range-changed does not).
+            val n = block.size
+            if (insertAt > start) repeat(n) { listAdapter.notifyItemMoved(start, insertAt + n - 1) }
+            else for (i in 0 until n) listAdapter.notifyItemMoved(start + i, insertAt + i)
+            dragChanged = true
             return true
         }
         // Dropping onto a group header puts the app right below that header, which is the only way
-        // into an empty group. Moving down already lands after the header; moving up needs +1.
-        val target = if (items[to] is HomeItem.Group && to < from) to + 1 else to
+        // into an empty group. Moving down already lands after the target; moving up needs +1,
+        // also when chooseDropTarget asked for "after" (empty cells past a row's last app).
+        val target = if (to < from && (items[to] is HomeItem.Group || dropAfterTarget)) to + 1 else to
         if (target == from) return false
         items.add(target, items.removeAt(from))
         listAdapter.notifyItemMoved(from, target)
+        dragChanged = true
         return true
     }
 

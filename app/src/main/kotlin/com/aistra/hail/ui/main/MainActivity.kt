@@ -25,10 +25,10 @@ import com.aistra.hail.utils.HPolicy
 import com.aistra.hail.utils.HUI
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedListener {
-    lateinit var fab: ExtendedFloatingActionButton
+    lateinit var fab: FloatingActionButton
     lateinit var appbar: AppBarLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,7 +63,8 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
     private fun initView() = ActivityMainBinding.inflate(layoutInflater).apply {
         setContentView(root)
         setSupportActionBar(appBarMain.toolbar)
-        fab = appBarMain.fab
+        // Portrait: FAB lives in activity_main (centered on the bottom bar). Landscape: in app_bar_main.
+        this@MainActivity.fab = root.findViewById(R.id.fab)
         appbar = appBarMain.appBarLayout
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
@@ -83,7 +84,8 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         }
         bottomNav?.applyDefaultInsetter { paddingRelative(isRtl, start = true, end = true, bottom = true) }
         navRail?.applyDefaultInsetter { paddingRelative(isRtl, start = true, top = true, bottom = true) }
-        fab.applyDefaultInsetter { marginRelative(isRtl, end = true, bottom = isLandscape) }
+        // Rises with the gesture bar like the nav bar does; landscape also keeps an end margin.
+        this@MainActivity.fab.applyDefaultInsetter { marginRelative(isRtl, end = isLandscape, bottom = true) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
