@@ -1,5 +1,6 @@
 package com.aistra.hail.ui.main
 
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
@@ -33,9 +34,12 @@ import com.aistra.hail.views.CradleDrawable
 import com.aistra.hail.utils.HPolicy
 import com.aistra.hail.utils.HUI
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.bottomappbar.BottomAppBarTopEdgeTreatment
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.shape.ShapeAppearanceModel
+import com.google.android.material.shape.MaterialShapeDrawable
 
 class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedListener {
     lateinit var fab: FloatingActionButton
@@ -107,29 +111,33 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
      */
     private fun applyCradle(nav: View, cradle: View) {
         val radius = resources.getDimension(R.dimen.fab_size) / 2
-        val gap = resources.getDimension(R.dimen.fab_cradle_margin)
         val offset = resources.getDimension(R.dimen.fab_bottom_offset)
+        val gap = resources.getDimension(R.dimen.fab_cradle_margin)
         nav.doOnLayout {
             runCatching {
-                // Bar content height, excluding the gesture-bar padding insetter adds.
                 val barHeight = nav.height - nav.paddingBottom
-                // FAB top edge relative to the bar's top edge (negative = sticking out above).
-                val fabTopFromBarTop = barHeight - offset - radius * 2
-                val overhang = (-fabTopFromBarTop).coerceAtLeast(0f)
+                // The FAB's bottom edge relative to the bar's top edge; the crest rises to just
+                // under the button so the button looks seated in the bulge.
+                val fabBottomAboveTop = barHeight - offset
+                val crest = (radius * 2 - fabBottomAboveTop + gap).coerceAtLeast(0f)
+                // Grow the overlay upwards by the crest so the curve has room to be drawn.
                 cradle.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                    height = nav.height + overhang.toInt()
+                    height = nav.height + crest.toInt()
                 }
-                val centerFromTop = overhang + fabTopFromBarTop + radius
                 cradle.background = CradleDrawable(
                     MaterialColors.getColor(nav, com.google.android.material.R.attr.colorSurfaceContainer),
-                    centerFromTop,
-                    radius + gap
+                    crest,
+                    radius * CRADLE_WIDTH_FACTOR,
+                    crest
                 )
-                // The overlay replaces the bar background: it is declared before the nav bar in
-                // the layout, so it draws underneath the nav items without any elevation tricks.
                 nav.setBackgroundColor(Color.TRANSPARENT)
             }.onFailure { HLog.e(it) }
         }
+    }
+
+    private companion object {
+        /** Bulge half width as a multiple of the FAB radius: wide and gentle, like a dock. */
+        const val CRADLE_WIDTH_FACTOR = 2.6f
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
