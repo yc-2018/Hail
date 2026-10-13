@@ -108,8 +108,12 @@ class HomeFragment : MainFragment(), MenuProvider {
         updateBarTitle()
         activity.appbar.setLiftOnScrollTargetView(binding.recyclerView)
         // The freeze button freezes every application on the Home screen.
-        activity.fab.setOnClickListener { setListFrozen(true) }
+        activity.fab.setOnClickListener {
+            it.spin()
+            setListFrozen(true)
+        }
         activity.fab.setOnLongClickListener {
+            it.spin()
             setListFrozen(false)
             true
         }

@@ -1,7 +1,12 @@
 package com.aistra.hail.ui.main
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -10,6 +15,8 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.doOnLayout
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.isVisible
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -21,9 +28,12 @@ import com.aistra.hail.R
 import com.aistra.hail.app.HailData
 import com.aistra.hail.databinding.ActivityMainBinding
 import com.aistra.hail.extensions.*
+import com.aistra.hail.utils.HLog
+import com.aistra.hail.views.CradleDrawable
 import com.aistra.hail.utils.HPolicy
 import com.aistra.hail.utils.HUI
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -86,6 +96,40 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         navRail?.applyDefaultInsetter { paddingRelative(isRtl, start = true, top = true, bottom = true) }
         // Rises with the gesture bar like the nav bar does; landscape also keeps an end margin.
         this@MainActivity.fab.applyDefaultInsetter { marginRelative(isRtl, end = isLandscape, bottom = true) }
+        bottomNav?.let { nav -> navCradle?.let { applyCradle(nav, it) } }
+    }
+
+    /**
+     * Paints [cradle] with the nav background color and carves a notch around the FAB.
+     *
+     * The overlay starts at the FAB's top edge and ends at the bar's bottom, so the circle center
+     * is exactly one FAB radius below the overlay's top. The notch radius adds a small gap.
+     */
+    private fun applyCradle(nav: View, cradle: View) {
+        val radius = resources.getDimension(R.dimen.fab_size) / 2
+        val gap = resources.getDimension(R.dimen.fab_cradle_margin)
+        val offset = resources.getDimension(R.dimen.fab_bottom_offset)
+        nav.doOnLayout {
+            runCatching {
+                // Bar content height, excluding the gesture-bar padding insetter adds.
+                val barHeight = nav.height - nav.paddingBottom
+                // FAB top edge relative to the bar's top edge (negative = sticking out above).
+                val fabTopFromBarTop = barHeight - offset - radius * 2
+                val overhang = (-fabTopFromBarTop).coerceAtLeast(0f)
+                cradle.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    height = nav.height + overhang.toInt()
+                }
+                val centerFromTop = overhang + fabTopFromBarTop + radius
+                cradle.background = CradleDrawable(
+                    MaterialColors.getColor(nav, com.google.android.material.R.attr.colorSurfaceContainer),
+                    centerFromTop,
+                    radius + gap
+                )
+                // The overlay replaces the bar background: it is declared before the nav bar in
+                // the layout, so it draws underneath the nav items without any elevation tricks.
+                nav.setBackgroundColor(Color.TRANSPARENT)
+            }.onFailure { HLog.e(it) }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

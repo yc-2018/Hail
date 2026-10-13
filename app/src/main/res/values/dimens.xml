@@ -10,5 +10,7 @@
     <dimen name="fab_size">64dp</dimen>
     <dimen name="fab_image_size">32dp</dimen>
     <dimen name="home_bottom_space">40dp</dimen>
-    <dimen name="fab_bottom_offset">18dp</dimen>
+    <dimen name="fab_bottom_offset">23dp</dimen>
+    <dimen name="fab_cradle_margin">6dp</dimen>
+    <dimen name="fab_cradle_corner">8dp</dimen>
 </resources>

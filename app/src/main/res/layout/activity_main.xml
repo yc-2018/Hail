@@ -12,6 +12,17 @@
         app:layout_constraintBottom_toTopOf="@id/bottom_nav"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Paints only the cradle around the FAB. Kept separate so BottomNavigationView keeps its own
+         native background (replacing it breaks its shape bookkeeping). Its height is set in code:
+         it extends above the bar so the FAB center falls inside the shape, as the cradle needs. -->
+    <View
+        android:id="@+id/nav_cradle"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintBottom_toBottomOf="@id/bottom_nav" />
+
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -19,6 +30,7 @@
         app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:menu="@menu/nav_main" />
+
 
     <!-- Freeze button sits in the bar's middle slot: its bottom edge lines up with the nav icons
          (fab_bottom_offset above the bar's bottom), the top sticks out a little over the bar. -->
