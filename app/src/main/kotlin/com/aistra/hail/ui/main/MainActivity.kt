@@ -1,10 +1,13 @@
 package com.aistra.hail.ui.main
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.Menu
 import android.view.View
+import android.view.ViewGroup
+import android.graphics.drawable.StateListDrawable
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -26,11 +29,13 @@ import com.aistra.hail.app.HailData
 import com.aistra.hail.databinding.ActivityMainBinding
 import com.aistra.hail.extensions.*
 import com.aistra.hail.utils.HPolicy
+import com.aistra.hail.views.NavPillDrawable
 import com.aistra.hail.utils.HUI
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.navigation.NavigationBarItemView
 import com.google.android.material.navigation.NavigationBarView
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.RelativeCornerSize
@@ -128,6 +133,40 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
         ).apply { fillColor = ColorStateList.valueOf(barColor(nav)) }
         // A shadow would show through the translucent fill, so the bar stays flat.
         nav.elevation = 0f
+        highlightItems(nav)
+    }
+
+    /**
+     * Wraps the selected tab's highlight around its icon *and* label.
+     *
+     * The bar's own active indicator is sized around the icon and always centers on it, so it has no
+     * way to reach the label below; drawing the pill as the item's background keeps it centered on
+     * the two together. The indicator itself stays enabled, just invisible, because the item's ripple
+     * hangs off it.
+     */
+    private fun highlightItems(nav: NavigationBarView) {
+        nav.itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
+        val color = MaterialColors.getColor(nav, com.google.android.material.R.attr.colorSecondaryContainer)
+        val width = resources.getDimension(R.dimen.nav_highlight_width)
+        val height = resources.getDimension(R.dimen.nav_highlight_height)
+        collectItems(nav).forEach { item ->
+            // An item draws its own background first, so the pill lands under the icon and label.
+            item.background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_checked), NavPillDrawable(color, width, height))
+            }
+        }
+    }
+
+    /** Every navigation item the bar holds, however it nests them. */
+    private fun collectItems(group: ViewGroup): List<View> {
+        val items = ArrayList<View>()
+        for (i in 0 until group.childCount) {
+            when (val child = group.getChildAt(i)) {
+                is NavigationBarItemView -> items += child
+                is ViewGroup -> items += collectItems(child)
+            }
+        }
+        return items
     }
 
     /**

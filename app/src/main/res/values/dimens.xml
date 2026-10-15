@@ -14,4 +14,7 @@
     <dimen name="nav_bar_gap">12dp</dimen>
     <!-- Room a scrolling list leaves at its end so everything can clear the floating bar. -->
     <dimen name="nav_bar_space">112dp</dimen>
+    <!-- The selected tab's highlight: wide enough for the icon, tall enough to wrap its label. -->
+    <dimen name="nav_highlight_width">64dp</dimen>
+    <dimen name="nav_highlight_height">52dp</dimen>
 </resources>
