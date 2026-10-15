@@ -1,0 +1,4 @@
+<resources>
+    <!-- No bottom bar in landscape: lists only need to clear the floating freeze button. -->
+    <dimen name="nav_bar_space">40dp</dimen>
+</resources>

@@ -125,6 +125,9 @@ class AboutFragment : MainFragment() {
                 ) { openLicenseDialog = true }
             }
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_medium)))
+            // Room to scroll clear of the floating bottom bar.
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.nav_bar_space)))
+            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
         }
     }
 

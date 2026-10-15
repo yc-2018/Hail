@@ -74,7 +74,8 @@ class HomeFragment : MainFragment(), MenuProvider {
                 }
             }
             adapter = listAdapter
-            applyDefaultInsetter { paddingRelative(isRtl, bottom = isLandscape) }
+            // The list scrolls behind the floating bottom bar, so it keeps the bottom inset itself.
+            applyDefaultInsetter { paddingRelative(isRtl, bottom = true) }
         }
         binding.refresh.apply {
             setOnRefreshListener {
@@ -107,16 +108,8 @@ class HomeFragment : MainFragment(), MenuProvider {
         updateList()
         updateBarTitle()
         activity.appbar.setLiftOnScrollTargetView(binding.recyclerView)
-        // The freeze button freezes every application on the Home screen.
-        activity.fab.setOnClickListener {
-            it.spin()
-            setListFrozen(true)
-        }
-        activity.fab.setOnLongClickListener {
-            it.spin()
-            setListFrozen(false)
-            true
-        }
+        // The freeze button freezes every application on the Home screen, long press thaws them.
+        activity.freezeAction = { frozen -> setListFrozen(frozen) }
     }
 
     /* ----------------------------------------------------------------- the list */
@@ -708,8 +701,7 @@ class HomeFragment : MainFragment(), MenuProvider {
     }
 
     override fun onDestroyView() {
-        activity.fab.setOnClickListener(null)
-        activity.fab.setOnLongClickListener(null)
+        activity.freezeAction = null
         listAdapter.onDestroy()
         super.onDestroyView()
         _binding = null

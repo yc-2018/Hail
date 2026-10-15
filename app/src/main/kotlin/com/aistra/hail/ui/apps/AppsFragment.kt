@@ -95,7 +95,8 @@ class AppsFragment : MainFragment(), AppsAdapter.OnItemClickListener, AppsAdapte
             activity.appbar.setLiftOnScrollTargetView(this)
             layoutManager = GridLayoutManager(activity, resources.getInteger(R.integer.apps_span))
             adapter = appsAdapter
-            applyDefaultInsetter { paddingRelative(isRtl, bottom = isLandscape) }
+            // The list scrolls behind the floating bottom bar, so it keeps the bottom inset itself.
+            applyDefaultInsetter { paddingRelative(isRtl, bottom = true) }
             registerForContextMenu(this)
         }
 

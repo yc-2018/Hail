@@ -10,5 +10,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
+        android:paddingBottom="@dimen/nav_bar_space"
         tools:listitem="@layout/item_apps" />
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

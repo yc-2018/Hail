@@ -9,8 +9,9 @@
     <dimen name="selection_stroke">2dp</dimen>
     <dimen name="fab_size">64dp</dimen>
     <dimen name="fab_image_size">32dp</dimen>
-    <dimen name="home_bottom_space">40dp</dimen>
-    <dimen name="fab_bottom_offset">23dp</dimen>
-    <dimen name="fab_cradle_margin">6dp</dimen>
-    <dimen name="fab_cradle_corner">8dp</dimen>
+    <!-- Gap from the screen edges to the floating bottom bar, and between the bar and the button. -->
+    <dimen name="nav_bar_margin">16dp</dimen>
+    <dimen name="nav_bar_gap">12dp</dimen>
+    <!-- Room a scrolling list leaves at its end so everything can clear the floating bar. -->
+    <dimen name="nav_bar_space">112dp</dimen>
 </resources>
